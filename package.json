@@ -6,9 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "types:generate": "npx supabase gen types typescript --project-id yctqvpgofipnaziqdxsz > types/database.generated.ts",
+    "types:update": "npm run types:generate && echo Types updated successfully!"
   },
   "dependencies": {
+    "@mantine/core": "^8.3.18",
+    "@mantine/hooks": "^8.3.18",
+    "@supabase/supabase-js": "^2.99.3",
+    "lucide-react": "^0.469.0",
+    "mantine-datatable": "^8.3.13",
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4"
@@ -19,6 +26,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "supabase": "^2.83.0",
     "typescript": "^5"
   }
 }
