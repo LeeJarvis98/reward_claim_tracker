@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
 
-const VALID_STATUSES = ['not_claimed', 'processing', 'completed', 'rejected'] as const;
+const VALID_STATUSES = ['not_claimed', 'processing', 'claimed', 'denied', 'error'] as const;
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     };
 
-    if (status === 'completed') {
+    if (status === 'claimed' || status === 'denied') {
       updateData.completed_at = new Date().toISOString();
     }
 

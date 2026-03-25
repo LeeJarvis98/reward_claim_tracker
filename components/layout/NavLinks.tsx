@@ -1,12 +1,13 @@
 ﻿'use client';
 
 import { NavLink } from '@mantine/core';
-import { LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, PlusCircle } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 const links = [
   { href: '/dashboard', label: 'Claims Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/add-account', label: 'Add Account ID', icon: PlusCircle },
 ];
 
 export default function NavLinks() {

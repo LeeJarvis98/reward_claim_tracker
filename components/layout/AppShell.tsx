@@ -10,13 +10,19 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import NavLinks from './NavLinks';
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+interface AppShellProps {
+  children: React.ReactNode;
+  aside?: React.ReactNode;
+}
+
+export default function AppShell({ children, aside }: AppShellProps) {
   const [opened, { toggle }] = useDisclosure();
 
   return (
     <MantineAppShell
       header={{ height: 56 }}
       navbar={{ width: 220, breakpoint: 'sm', collapsed: { mobile: !opened } }}
+      aside={aside ? { width: 300, breakpoint: 'sm', collapsed: { mobile: true } } : undefined}
       padding="0"
     >
       <MantineAppShell.Header style={{ backgroundColor: '#25282a', borderBottom: '1px solid #333' }}>
@@ -33,6 +39,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <MantineAppShell.Navbar p="sm" style={{ backgroundColor: '#1e2023', borderRight: '1px solid #333' }}>
         <NavLinks />
       </MantineAppShell.Navbar>
+
+      {aside && (
+        <MantineAppShell.Aside p="sm" style={{ backgroundColor: '#1e2023', borderLeft: '1px solid #333' }}>
+          {aside}
+        </MantineAppShell.Aside>
+      )}
 
       <MantineAppShell.Main style={{ backgroundColor: '#1a1b1e', minHeight: '100vh' }}>
         {children}

@@ -28,7 +28,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch claims' }, { status: 500 });
     }
 
-    return NextResponse.json({ claims: data ?? [], total: count ?? 0, page, pageSize });
+    const claims = data ?? [];
+
+    // Collect unique user_ids and fetch bank_info from the users table
+    const userIds = [...new Set(claims.map((c) => c.user_id).filter(Boolean))] as string[];
+    let usersMap: Record<string, { bank_info: unknown; email: string }> = {};
+
+    if (userIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, bank_info, email')
+        .in('id', userIds);
+
+      if (usersData) {
+        usersMap = Object.fromEntries(usersData.map((u) => [u.id, { bank_info: u.bank_info, email: u.email }]));
+      }
+    }
+
+    const claimsWithUsers = claims.map((claim) => ({
+      ...claim,
+      users: claim.user_id ? (usersMap[claim.user_id] ?? null) : null,
+    }));
+
+    return NextResponse.json({ claims: claimsWithUsers, total: count ?? 0, page, pageSize });
   } catch (err) {
     console.error('[get-all-claims] error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
