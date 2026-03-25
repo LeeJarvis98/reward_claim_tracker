@@ -7,10 +7,11 @@ interface StatusBadgeProps {
 }
 
 const statusConfig: Record<string, { color: string; label: string }> = {
-  not_claimed: { color: 'gray', label: 'Not Claimed' },
+  not_claimed: { color: 'gray',   label: 'Not Claimed' },
   processing:  { color: 'yellow', label: 'Processing' },
-  completed:   { color: 'green', label: 'Completed' },
-  rejected:    { color: 'red', label: 'Rejected' },
+  claimed:     { color: 'green',  label: 'Claimed' },
+  denied:      { color: 'red',    label: 'Denied' },
+  error:       { color: 'orange', label: 'Error' },
 };
 
 export default function StatusBadge({ status }: StatusBadgeProps) {

@@ -1,9 +1,10 @@
 ﻿'use client';
 
-import { useState } from 'react';
-import { DataTable } from 'mantine-datatable';
-import { Button, Group, TextInput, Text, ActionIcon, Tooltip, Stack, Title, Alert } from '@mantine/core';
-import { Trash2, Plus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { DataTable, DataTableSortStatus } from 'mantine-datatable';
+import { Button, Group, TextInput, Text, ActionIcon, Tooltip, Stack, Title, Alert, Select } from '@mantine/core';
+import { RefreshCw, Trash2, Plus, Search } from 'lucide-react';
 
 interface LicensedAccount {
   account_id: string;
@@ -25,13 +26,84 @@ interface LicensedAccountsTableProps {
   accounts: LicensedAccount[];
 }
 
+const PAGE_SIZES = [10, 25, 50];
+
 export default function LicensedAccountsTable({ accounts: initialAccounts }: LicensedAccountsTableProps) {
+  const router = useRouter();
   const [accounts, setAccounts] = useState(initialAccounts);
   const [newAccountId, setNewAccountId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    setAccounts(initialAccounts);
+    setIsRefreshing(false);
+  }, [initialAccounts]);
+
+  function handleRefresh() {
+    setIsRefreshing(true);
+    router.refresh();
+  }
+  const [search, setSearch] = useState('');
+  const [platformFilter, setPlatformFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [sortStatus, setSortStatus] = useState<DataTableSortStatus<LicensedAccount>>({
+    columnAccessor: 'licensed_date',
+    direction: 'desc',
+  });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
+
+  const platformOptions = useMemo(() => {
+    const unique = [...new Set(accounts.map((a) => a.platform).filter(Boolean))] as string[];
+    return unique.map((p) => ({ value: p, label: p }));
+  }, [accounts]);
+
+  const statusOptions = useMemo(() => {
+    const unique = [...new Set(accounts.map((a) => a.licensed_status).filter(Boolean))] as string[];
+    return unique.map((s) => ({ value: s, label: s }));
+  }, [accounts]);
+
+  const filtered = useMemo(() => {
+    let result = accounts;
+
+    if (platformFilter) {
+      result = result.filter((a) => a.platform === platformFilter);
+    }
+
+    if (statusFilter) {
+      result = result.filter((a) => a.licensed_status === statusFilter);
+    }
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter((a) =>
+        [a.account_id, a.email, a.uid, a.owner, a.platform]
+          .some((v) => v?.toLowerCase().includes(q))
+      );
+    }
+
+    const { columnAccessor, direction } = sortStatus;
+    result = [...result].sort((a, b) => {
+      const aVal = a[columnAccessor as keyof LicensedAccount];
+      const bVal = b[columnAccessor as keyof LicensedAccount];
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+      const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      return direction === 'asc' ? cmp : -cmp;
+    });
+
+    return result;
+  }, [accounts, platformFilter, statusFilter, search, sortStatus]);
+
+  const paginated = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
 
   async function handleAdd() {
     if (!newAccountId.trim()) return;
@@ -124,37 +196,84 @@ export default function LicensedAccountsTable({ accounts: initialAccounts }: Lic
       </div>
 
       <div>
-        <Group mb="xs">
+        <Group mb="xs" justify="space-between">
           <Title order={4}>Licensed Accounts</Title>
-          <Text size="sm" c="dimmed">{accounts.length} record{accounts.length !== 1 ? 's' : ''}</Text>
+          <Group gap="sm">
+            <Button
+              leftSection={<RefreshCw size={14} />}
+              variant="subtle"
+              size="sm"
+              loading={isRefreshing}
+              onClick={handleRefresh}
+            >
+              Refresh
+            </Button>
+            <Text size="sm" c="dimmed">{filtered.length} record{filtered.length !== 1 ? 's' : ''}</Text>
+          </Group>
+        </Group>
+        <Group mb="sm" wrap="wrap">
+          <TextInput
+            placeholder="Search account, email, UID, owner..."
+            leftSection={<Search size={14} />}
+            value={search}
+            onChange={(e) => { setSearch(e.currentTarget.value); setPage(1); }}
+            style={{ width: 280 }}
+          />
+          <Select
+            placeholder="Filter by platform"
+            clearable
+            value={platformFilter}
+            onChange={(v) => { setPlatformFilter(v); setPage(1); }}
+            data={platformOptions}
+            style={{ width: 180 }}
+          />
+          <Select
+            placeholder="Filter by status"
+            clearable
+            value={statusFilter}
+            onChange={(v) => { setStatusFilter(v); setPage(1); }}
+            data={statusOptions}
+            style={{ width: 180 }}
+          />
         </Group>
         <DataTable
-          records={accounts}
+          records={paginated}
+          idAccessor="account_id"
+          totalRecords={filtered.length}
+          recordsPerPage={pageSize}
+          page={page}
+          onPageChange={setPage}
+          recordsPerPageOptions={PAGE_SIZES}
+          onRecordsPerPageChange={(size) => { setPageSize(size); setPage(1); }}
+          sortStatus={sortStatus}
+          onSortStatusChange={(s) => { setSortStatus(s); setPage(1); }}
           withTableBorder
           borderRadius="md"
           highlightOnHover
           striped
           columns={[
-            { accessor: 'account_id', title: 'Account ID', width: 150 },
-            { accessor: 'email', title: 'Email', width: 190 },
-            { accessor: 'uid', title: 'UID', width: 150 },
-            { accessor: 'platform', title: 'Platform', width: 100 },
-            { accessor: 'licensed_status', title: 'Status', width: 100 },
-            { accessor: 'owner', title: 'Owner', width: 100 },
+            { accessor: 'account_id', title: 'Account ID', sortable: true, width: 150 },
+            { accessor: 'email', title: 'Email', sortable: true, width: 190 },
+            { accessor: 'uid', title: 'UID', sortable: true, width: 150 },
+            { accessor: 'platform', title: 'Platform', sortable: true, width: 100 },
+            { accessor: 'licensed_status', title: 'Status', sortable: true, width: 100 },
+            { accessor: 'owner', title: 'Owner', sortable: true, width: 100 },
             {
               accessor: 'licensed_date',
               title: 'Licensed At',
+              sortable: true,
               width: 170,
               render: (row) => row.licensed_date ? new Date(row.licensed_date).toLocaleString() : '-',
             },
             {
               accessor: 'registered_at',
               title: 'Registered At',
+              sortable: true,
               width: 170,
               render: (row) => row.registered_at ? new Date(row.registered_at).toLocaleString() : '-',
             },
-            { accessor: 'lot_volume', title: 'Lot Volume', width: 100 },
-            { accessor: 'reward', title: 'Reward', width: 90 },
+            { accessor: 'lot_volume', title: 'Lot Volume', sortable: true, width: 100 },
+            { accessor: 'reward', title: 'Reward', sortable: true, width: 90 },
             {
               accessor: 'actions',
               title: '',

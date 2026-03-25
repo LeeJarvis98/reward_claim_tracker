@@ -13,6 +13,12 @@ const links = [
 export default function NavLinks() {
   const pathname = usePathname();
 
+  const bestMatch = links
+    .filter(link => pathname === link.href || pathname.startsWith(link.href + '/'))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+
+  const isActive = (href: string) => bestMatch?.href === href;
+
   return (
     <>
       {links.map(({ href, label, icon: Icon }) => (
@@ -22,7 +28,7 @@ export default function NavLinks() {
           href={href}
           label={label}
           leftSection={<Icon size={16} />}
-          active={pathname === href || pathname.startsWith(href + '/')}
+          active={isActive(href)}
         />
       ))}
     </>
